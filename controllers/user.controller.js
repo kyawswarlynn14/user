@@ -38,3 +38,87 @@ exports.login = asyncErrorHandler(async (req, res, next) => {
 	});
 });
 
+exports.getUserInfo = asyncErrorHandler(async (req, res, next) => {
+	const id = req.user._id;
+	const user = await UserModel.findById(id);
+
+	res.status(200).json({
+		success: true,
+		user,
+	})
+})
+
+exports.getAllUsers = asyncErrorHandler(async (req, res, next) => {
+	const users = await UserModel.find().sort({ createdAt: -1 });
+
+	res.status(200).json({
+		success: true,
+		users,
+	})
+})
+
+exports.updateUserInfo = asyncErrorHandler(async (req, res, next) => {
+	const id = req.user._id;
+	const { name, email } = req.body;
+
+	const user = await UserModel.findByIdAndUpdate(id, { name, email }, { new: true});
+	if(!user) {
+		return next(new CustomError("User not fount!", 404));
+	}
+
+	res.status(200).json({
+		success: true,
+		user,
+	})
+});
+
+exports.updateUserPassword = asyncErrorHandler(async (req, res, next) => {
+	const id = req.user._id;
+	const { oldPassword, newPassword } = req.body;
+	if(!oldPassword || !newPassword) {
+		return next(new CustomError("Please enter old and new password!", 400));
+	}
+
+	const user = await UserModel.findById(id);
+	const isPasswordMatch = await user?.comparePassword(oldPassword);
+	if(!isPasswordMatch) {
+		return next(new CustomError("Invalid old password!", 400));
+	}
+
+	user.password = newPassword;
+	await user.save();
+
+	res.status(200).json({
+		success: true,
+		message: "Password updated successfully!",
+	})
+});
+
+exports.updateUserRole = asyncErrorHandler(async (req, res, next) => {
+	const { id, role } = req.body;
+
+	const user = await UserModel.findByIdAndUpdate(id, { role }, {new: true});
+
+	if(!user) {
+		return next(new CustomError("User not found!", 404));
+	}
+
+	res.status(200).json({
+		success: true,
+		message: "User Role updated successfully!",
+	})
+});
+
+exports.deleteOneUser = asyncErrorHandler(async (req, res, next) => {
+	const { id } = req.params;
+	const user = await UserModel.findByIdAndDelete(id);
+
+	if(!user) {
+		return next(new CustomError("User not found!", 404));
+	}
+
+	res.status(200).json({
+		success: true,
+		message: "User deleted successfully!",
+	})
+});
